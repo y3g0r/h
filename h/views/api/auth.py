@@ -10,6 +10,7 @@ from pyramid.httpexceptions import HTTPFound, exception_response
 from pyramid.view import view_config, view_defaults
 
 from h import models
+from h.views.client import process_url_template
 from h.views.api.exceptions import OAuthAuthorizeError, OAuthTokenError
 from h.services.oauth_validator import DEFAULT_SCOPES
 from h.util.datetime import utc_iso8601
@@ -164,6 +165,7 @@ class OAuthAuthorizeController:
             )
 
     def _render_web_message_response(self, redirect_uri):
+        redirect_uri = process_url_template(redirect_uri, self.request)
         location = urlparse(redirect_uri)
         params = parse_qs(location.query)
         origin = "{url.scheme}://{url.netloc}".format(url=location)

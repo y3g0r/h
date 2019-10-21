@@ -20,11 +20,21 @@ from h.util.uri import origin
 DEFAULT_CLIENT_URL = "https://cdn.hypothes.is/hypothesis"
 
 
+def process_url_template(url_template, request):
+    """
+    Replace placeholders in a URL with elements of the current request's URL.
+    """
+    url = url_template.replace('{current_host}', request.domain)
+    url = url.replace('{current_scheme}', request.scheme)
+    return url
+
+
 def _client_url(request):
     """
     Return the configured URL for the client.
     """
     url = request.registry.settings.get("h.client_url", DEFAULT_CLIENT_URL)
+    url = process_url_template(url, request)
 
     if request.feature("embed_cachebuster"):
         url += "?cachebuster=" + str(int(time.time()))
