@@ -34,7 +34,53 @@ def create_app(global_config, **settings):
     """
     config = configure(settings=settings)
     config.include(__name__)
+    config.add_tween("h.app.simple_tween_factory")
     return config.make_wsgi_app()
+
+from pyramid.request import Request
+from pyramid.response import Response
+import json
+import os
+from datetime import datetime
+
+def temp_file(req, resp):
+    now = datetime.now()
+    strnow = now.strftime("%Y-%m-%d_%H-%M-%S")
+    # filename = os.path.join("/", "tmp", "".join(random.choice(string.ascii_letters) for _ in range(20)))
+    filename = os.path.join("/", "tmp", f"{strnow}_{req.method}_{req.url.replace('/', '-').replace('?', '-').replace('&', '-')}")[:250]
+    with open(filename, "ab") as f:
+        f.write(resp.body)
+    return filename
+
+
+def simple_tween_factory(handler, registry):
+    # one-time configuration code goes here
+
+    def simple_tween(request: Request):
+        # code to be executed for each request before
+        # the actual application code goes here
+
+        response = handler(request)  # type: Response
+
+        # code to be executed for each request after
+        # the actual application code goes here
+        response_body_file = temp_file(request, response)
+        dump = {
+            "Request URL": request.url,
+            "Request method": request.method,
+            "Remote address": request.client_addr,
+            "Status code": response.status,
+            "Query params": request.GET.dict_of_lists(),
+            "Body params": request.POST.dict_of_lists(),
+            "Request headers": dict(request.headers),
+            "Response headers": dict(response.headers),
+            "Response body": response_body_file
+        }
+        log.error(json.dumps(dump, indent=2))
+        return response
+
+    return simple_tween
+
 
 
 def includeme(config):
